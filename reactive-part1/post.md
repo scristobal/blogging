@@ -81,4 +81,6 @@ client$.subscribe((client) => client.attachDataSource(flight$));
  
 ## Coming next
 
-Next chapter we cover filtering data using a [projection and combination operator](https://rxjs.dev/api/index/function/combineLatest) and how to create `clients` from `connections`. 
+So far we have covered the basic structure of the code: created two observables for client and server side and *programmagically* connected both. 
+
+In then next chapter we will fill the gaps and describe how clients and data sources are connected, how to create `clients` from `connections` and how data sources are filtered using a [projection and combination operator](https://rxjs.dev/api/index/function/combineLatest). 
