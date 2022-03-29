@@ -1,17 +1,17 @@
-# Rubber duck series: Reactive programming in action
-The rubber duck series is a series of blog posts, inspired by the [rubber duck debugging method](https://rubberduckdebugging.com/). 
+# Reactive programming in action
+This post is inspired by the [rubber duck debugging method](https://rubberduckdebugging.com/). But instead of a rubber duck, the target is an **advanced reader** already proficient with the topics covered. Basics will not be covered, there are much better resources out there. Instead, the focus will be on production-ready code with real examples and description of some of the architectural decisions. 
 
-Instead of a rubber duck, the target is an **advanced reader** already proficient with the topics covered. Basics will not be covered, there are much better resources out there. Instead, the focus will be on production-ready code with real examples and description of some of the architectural decisions. 
-
-In this of post, the basic structure of some of [DataBeacon](www.databeacon.aero)’s software components will be covered. In particular, this post series shows how [reactive programming](https://reactivex.io/) is used in detail. 
+In particular, this post shows how [reactive programming](https://reactivex.io/) is used in one of [DataBeacon](www.databeacon.aero)’s central software component, called *Funnel*.
 
 > Code snippets have been adapted to this blog post specifically, it is not a 1:1 copy of production code and some implementation details have hidden. 
 ## Introduction
-Victor5-funnel sits between Level5 [Kafka](https://kafka.apache.org/) topic and Victor5 [SPA](https://developer.mozilla.org/en-US/docs/Glossary/SPA) clients. It coordinates client connections and transforms Kafka input stream into a web-socket connection (Socket.IO)  adapted to each client.
+The *Funnel* component sits between the  [Kafka](https://kafka.apache.org/) topics and the [SPA](https://developer.mozilla.org/en-US/docs/Glossary/SPA) clients. It coordinates client connections and transforms a Kafka input stream into a web-socket connection (Socket.IO)  adapted to each client status and preferences. 
 
-It is written in [TypeScript](https://www.typescriptlang.org/) and translated to [Node](https://nodejs.org/en/), although currently being migrated to [Go](https://go.dev/). This post focus on Node implementation, but I might cover the rationale and migration to Go in a future post. 
+Kafka topics -> Funnel -> clients
 
-Let’s explore this component in detail. 
+*Funnel* is written in [TypeScript](https://www.typescriptlang.org/) and translated to [Node](https://nodejs.org/en/), although currently being migrated to [Go](https://go.dev/). This post focus on Node implementation, but I might cover the rationale and migration to Go in a future post. 
+
+Let’s explore *Funnel* in detail. 
 ## Setting up clients
 After setting up the environment details the main code starts with:
 
@@ -19,27 +19,27 @@ After setting up the environment details the main code starts with:
 const connection$ = await socketIOServer();
 ```
  
-Here we set up a `connection$` observable of type `fromSocketIO` [link](www.mpn.js)  as new http request enter the server `connection$` will notify the subscribers with an object of type `ListenerAndSender`
+Here we create up a `connection$` observable of type `fromSocketIO` [link](www.mpn.js), as new http requests enter the server, `connection$` will notify the subscribers with an object of type `Connector`
 
 ```typescript
-interface ListenerAndSender<L extends EventsMap, S extends EventsMap> {
-    from: <Ev extends EventNames<L>>(eventName: Ev) => Observable<EventParam<L, Ev>[0]>;
-    to: <Ev extends EventNames<S>>(eventName: Ev) => Observer<Parameters<S[Ev]>[0]>;
-    id: string;
-    user?: string;
-    onDisconnect: (callback: () => void) => void;
+interface Connector<L extends EventsMap, S extends EventsMap> {
+	from: <Ev extends EventNames<L>>(eventName: Ev) => Observable<EventParam<L, Ev>>;
+	to: <Ev extends EventNames<S>>(eventName: Ev) => Observer<Parameters<S[Ev]>>;
+	id: string;
+	user?: string;
+	onDisconnect: (callback: () => void) => void;
 }
 ```
+
+Note the `from` and `to` methods, they both return a factory of `Observables` parametrised by event names to [receive](https://socket.io/docs/v4/server-api/#socketoneventname-callback) or [emit](https://socket.io/docs/v4/server-api/#socketemiteventname-args) data respectively. 
 
 This connection object can be used to monitor connections activity:
 
 ```typescript
 connection$.subscribe(({ id, user, onDisconnect }) => {
-        log(`Connected ${user} through session ${id}`);
-        onDisconnect(() => {
-            log(`Disconnected ${user} from session ${id}`);
-        });
-    });
+	log(`Connected ${user} through session ${id}`);
+	onDisconnect(() => log(`Disconnected ${user} from session ${id}`));
+});
 ```
 
 This interface is used by the pure function `client` to generate an observable of `client$`
@@ -48,15 +48,19 @@ This interface is used by the pure function `client` to generate an observable o
 const client$ = connection$.pipe(map((connector) => client(connector)));
 ```
 
-Each `client` has an observable of `state$` that represents the always-changing client state. 
+Each `client` has an observable of `state$` that represents updates in the client state. 
 
 ```typescript
 client$.subscribe(({ state$ }) => state$.subscribe((state) => log(util.inspect(state, { depth: 4 }))));
 ```
 
-Next thing we need is to attach a data source to the clients. Luckily, in addition to `state$` each client implements an `attachDataSource` and a `removeDataSource`
+Next thing we need is to attach a data source to the clients. Luckily, in addition to `state$` each client implements an `attachDataSource` and a `removeDataSource` 
 
+Only one source can be attached at a time, `attachDataSource` expects an observable and `removeDataSource` is just a function that unsubscribes the client from the source updates. 
+
+That’s all we need for now, we will describe the `client` generation in a future post.  Let’s now setup the data sources. 
 ## Getting data from source
+
 
 ```typescript
 const flight$ = await kafkaConnector();
@@ -65,17 +69,16 @@ const flight$ = await kafkaConnector();
 We can monitor input data with a simple subscription: 
 
 ```typescript
-flight$
-	.subscribe(({flights}) => log(`Got a new msg containing ${flights.length} flights`));
+flight$.subscribe(({flights}) => log(`Got a new msg containing ${flights.length} flights`));
 ```
 
 
 Subscribe clients with
 
 ```typescript
-    client$.subscribe((client) => client.attachDataSource(flight$));
+client$.subscribe((client) => client.attachDataSource(flight$));
 ```
  
-## Filtering data 
+## Coming next
 
-Next chapter
+Next chapter we cover filtering data using a [projection and combination operator](https://rxjs.dev/api/index/function/combineLatest) and how to create `clients` from `connections`. 
