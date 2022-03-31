@@ -1,8 +1,8 @@
 # Reactive programming in action
 
-This post is inspired by the [rubber duck debugging method](https://rubberduckdebugging.com/). But instead of a rubber duck, the target is an **advanced reader** already proficient with the topics covered. Basics will not be covered, there are much better resources out there. Instead, the focus will be on production-ready code with real examples and description of some of the architectural decisions.
+This post shows how [reactive programming](https://reactivex.io/) is used in one of [DataBeacon](www.databeacon.aero)’s central software component, called _Funnel_. The post is inspired by the [rubber duck debugging method](https://rubberduckdebugging.com/).
 
-In particular, this post shows how [reactive programming](https://reactivex.io/) is used in one of [DataBeacon](www.databeacon.aero)’s central software component, called _Funnel_.
+Instead of covering the basics, there are much better resources out there, the focus will be on production-ready code with real examples and description of some of the architectural decisions.
 
 > Code snippets have been adapted to this blog post specifically, it is not a 1:1 copy of production code and some implementation details have hidden.
 
@@ -24,7 +24,7 @@ After setting up the environment details the main code starts with:
 const connection$ = await socketIOServer();
 ```
 
-Here we create up a `connection$` observable of type `fromSocketIO` [link](www.mpn.js), as new http requests enter the server, `connection$` will notify the subscribers with an object of type `Connector`
+Here we create up a `connection$` observable of type `fromSocketIO`  using [rxjs-socket.io](https://github.com/scristobal/rxjs-socket.io). For each new http request, `connection$` will notify the subscribers with an object of type `Connector`
 
 ```typescript
 interface Connector<L extends EventsMap, S extends EventsMap> {
@@ -36,7 +36,9 @@ interface Connector<L extends EventsMap, S extends EventsMap> {
 }
 ```
 
-Note the `from` and `to` methods, they both return a factory of `Observables` parametrised by event names to [receive](https://socket.io/docs/v4/server-api/#socketoneventname-callback) or [emit](https://socket.io/docs/v4/server-api/#socketemiteventname-args) data respectively.
+Note the `from` and `to` methods, they both return a factory of `Observables` with the event name as a parameter to [receive](https://socket.io/docs/v4/server-api/#socketoneventname-callback) or [emit](https://socket.io/docs/v4/server-api/#socketemiteventname-args) data respectively. The parameters `id` and `user` are self-descriptive and `onDisconnect` accepts a callback that will be executed upon the client’s disconnection. 
+
+Under the hood, the Socket.IO server is protected by the [auth0-socketio](https://www.npmjs.com/package/auth0-socketio) middleware to mange authentication with the Auth0 identity provider. 
 
 This connection object can be used to monitor connections activity:
 
@@ -47,13 +49,13 @@ connection$.subscribe(({ id, user, onDisconnect }) => {
 });
 ```
 
-This interface is used by the pure function `client` to generate an observable of `client$`
+This interface is used by the function `client` to generate an observable of `client$`
 
 ```typescript
 const client$ = connection$.pipe(map((connector) => client(connector)));
 ```
 
-Each `client` has an observable of `state$` that represents updates in the client state.
+Each `client` has an observable of `state$` that updates with the client state, which is implemented using React+Redux. 
 
 ```typescript
 client$.subscribe(({ state$ }) => state$.subscribe((state) => log(util.inspect(state, { depth: 4 }))));
@@ -67,24 +69,27 @@ That’s all we need for now, we will describe the `client` generation in a futu
 
 ## Getting data from source
 
+To transform a Kafka topic to an observable we use the [rxkfk](https://www.npmjs.com/package/rxjs-kafka) library.  Details of the connection are hidden inside the `kafkaConnector`  but it returns a typed observable with the messages of a given topic(s). 
+
 ```typescript
-const flight$ = await kafkaConnector();
+const msg$ = await kafkaConnector();
 ```
 
 We can monitor input data with a simple subscription:
 
 ```typescript
-flight$.subscribe(({ flights }) => log(`Got a new msg containing ${flights.length} flights`));
+msg$.subscribe(({ flights }) => log(`Got a new msg containing ${flights.length} flights`));
 ```
 
-Subscribe clients with
+Finally, each client should be subscribed individually. In case we want to attach all clients to the same source we should simply attach an observer to `client$` to establish the link between each individual	`client` and the `msg$` observable. 
 
 ```typescript
-client$.subscribe((client) => client.attachDataSource(flight$));
+client$.subscribe((client) => client.attachDataSource(msg$));
 ```
 
+In addition to attach data sources, clients can unsubscribe calling the `client.removeDataSource()` method. This allows clients to dynamically change data sources. 
 ## Coming next
 
-So far we have covered the basic structure of the code: created two observables for client and server side and _programmagically_ connected both.
+So far we have covered the basic structure of the code: created two observables for client and server side and _programmagically_ ✨ connected both.
 
 In then next chapter we will fill the gaps and describe how clients and data sources are connected, how to create `clients` from `connections` and how data sources are filtered using a [projection and combination operator](https://rxjs.dev/api/index/function/combineLatest).
