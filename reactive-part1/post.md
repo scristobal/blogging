@@ -36,7 +36,15 @@ interface Connector<L extends EventsMap, S extends EventsMap> {
 }
 ```
 
-Note the `from` and `to` methods, they both return a factory of `Observables` with the event name as a parameter to [receive](https://socket.io/docs/v4/server-api/#socketoneventname-callback) or [emit](https://socket.io/docs/v4/server-api/#socketemiteventname-args) data respectively. The parameters `id` and `user` are self-descriptive and `onDisconnect` accepts a callback that will be executed upon the client’s disconnection.
+Note the first two methods, they are both a factory:
+
+-   `from` takes an event name as parameter and produces an `Observable` from [receive](https://socket.io/docs/v4/server-api/#socketoneventname-callback).
+
+-   `to` takes an event name as a parameter and produces an `Observer` to [emit](https://socket.io/docs/v4/server-api/#socketemiteventname-args).
+
+This allows things like `from('action').subscribe(to('reducer'))` which could be used to manage client state remotely.
+
+The parameters `id` and `user` are self-descriptive and `onDisconnect` registers a callback that will be executed upon the client’s disconnection.
 
 Under the hood, the Socket.IO server is protected by the [auth0-socketio](https://www.npmjs.com/package/auth0-socketio) middleware to mange authentication with the Auth0 identity provider.
 
