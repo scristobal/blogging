@@ -1,4 +1,11 @@
-# Reactive programming in action
+---
+description: A real world example of reactive programing, using Kafka, Socket.IO and TypeScript
+tags: RxJS, typescript, kafka, socketio
+license: public-domain
+published: false
+---
+
+# Reactive programming in action - part 1
 
 This post shows how [reactive programming](https://reactivex.io/) is used in one of [DataBeacon](www.databeacon.aero)’s central software component, called _Funnel_. The post is inspired by the [rubber duck debugging method](https://rubberduckdebugging.com/).
 
