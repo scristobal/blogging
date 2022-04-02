@@ -18,6 +18,6 @@ jobs:
         with:
           articles_folder: articles
           devto_api_key: ${{ secrets.DEVTO_API_KEY }}
-          gh_token: ${{ secrets.GH_TOKEN }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
           medium_token: ${{ secrets.MEDIUM_TOKEN }}
           medium_user_id: ${{ secrets.MEDIUM_USER_ID }} 
