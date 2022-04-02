@@ -1,6 +1,6 @@
 ---
 description: An example of reactive programing, using Kafka, Socket.IO and TypeScript
-tags: RxJS, typescript, kafka, socketio
+tags: RxJS, typescript, kafka, socketio, nodejs
 license: public-domain
 published: false
 ---
