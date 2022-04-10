@@ -76,9 +76,39 @@ const client = ({ from, to }: Connector<ListenEventMap, SendEventMap>) => {
     }
 
     function removeDataSource() {
-        subscription?.unsubscribe();
+        subscription.unsubscribe();
     }
 
     return Object.freeze({ state$, attachDataSource, removeDataSource });
 };
+```
+
+## Creating data sources
+
+Signature of [`rxkfk`](https://www.npmjs.com/package/rxjs-kafka)
+
+```typescript
+declare const rxkfk: <T>(
+    kafkaOptions: KafkaConfig,
+    topicOptions: ConsumerSubscribeTopic | string,
+    consumerOptions?: ConsumerConfig | undefined,
+    producerOptions?: ProducerConfig | undefined
+) => {
+    message$$: Observable<T | undefined>;
+    pushMessage$$: Subject<T | undefined>;
+};
+```
+
+Only reading messages
+
+```typescript
+const { message$$ } = rxkfk<TimeSeriesItem>(kafkaOptions, topicOptions, consumerOptions);
+```
+
+Create a `BehaviorSubject` to let many clients connect and have the latest data available
+
+```typescript
+const fromLastMessage$$ = new BehaviorSubject<TimeSeriesItem>({ epoch: undefined, flights: [] });
+
+message$$.pipe(filter((msg): msg is TimeSeriesItem => msg !== undefined)).subscribe(fromLastMessage$$);
 ```
