@@ -11,7 +11,7 @@ This post shows how [reactive programming](https://reactivex.io/) is used in one
 
 Instead of covering the basics, there are much better resources out there, the focus will be on production-ready code with real examples and description of some of the architectural decisions.
 
-> Code snippets have been adapted to this blog post specifically, it is not a 1:1 copy of production code and some implementation details have hidden.
+> Code snippets have been adapted to this blog post specifically, it is not a 1:1 copy of production code and some implementation details have been hidden.
 
 ## Introduction
 
@@ -38,12 +38,11 @@ interface Connector<L extends EventsMap, S extends EventsMap> {
     from: <Ev extends EventNames<L>>(eventName: Ev) => Observable<EventParam<L, Ev>>;
     to: <Ev extends EventNames<S>>(eventName: Ev) => Observer<Parameters<S[Ev]>>;
     id: string;
-    user?: string;
     onDisconnect: (callback: () => void) => void;
 }
 ```
 
-Note the first two methods, they are both a factory:
+Note the first two methods, they are factories:
 
 -   `from` takes an event name as parameter and produces an `Observable` from [receive](https://socket.io/docs/v4/server-api/#socketoneventname-callback).
 
@@ -51,7 +50,7 @@ Note the first two methods, they are both a factory:
 
 This allows things like `from('action').subscribe(to('reducer'))` which could be used to manage client state remotely.
 
-The parameters `id` and `user` are self-descriptive and `onDisconnect` registers a callback that will be executed upon the client’s disconnection.
+The parameter `id` is unique for each connector and `onDisconnect` registers a callback that will be executed upon the client’s disconnection.
 
 Under the hood, the Socket.IO server is protected by the [auth0-socketio](https://www.npmjs.com/package/auth0-socketio) middleware to mange authentication with the Auth0 identity provider.
 
@@ -93,7 +92,7 @@ const msg$ = await kafkaConnector();
 We can monitor input data with a simple subscription:
 
 ```typescript
-msg$.subscribe(({ flights }) => log(`Got a new msg containing ${flights.length} flights`));
+msg$.subscribe((msg) => log(`Got a new msg of length ${msg.length}`));
 ```
 
 Finally, each client should be subscribed individually. In case we want to attach all clients to the same source we should simply attach an observer to `client$` to establish the link between each individual `client` and the `msg$` observable.
