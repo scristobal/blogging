@@ -23,7 +23,7 @@ Setup the client function, the `state$` observable is straight forward from `rxk
 const client = ({ from, to }: Connector<ListenEventMap, SendEventMap>) => {
     const state$ = from('state');
 
-    function attachDataSource(serverMessage$: BehaviorSubject<TimeSeriesItem>) {}
+    function attachDataSource(serverMessage$: BehaviorSubject<FeedState>) {}
 
     function removeDataSource() {}
 
@@ -38,13 +38,13 @@ The `attachDataSource` is done in three steps:
 2.  create the `flight$` observable source, `clientProjection` is basically a `message` filter that uses `clientState` to determine if the message should be forwarded. The signature is
 
     ```typescript
-    const clientProjection = (serverState: TimeSeriesItem, clientState: ClientState) => TimeSeriesItem;
+    const clientProjection = (serverState: FeedState, clientState: ClientState) => FeedState;
     ```
 
 3.  finally subscribe the `emitter` observer to the `flight$` observable.
 
 ```typescript
-function attachDataSource(serverMessage$: BehaviorSubject<TimeSeriesItem>) {
+function attachDataSource(serverMessage$: BehaviorSubject<FeedState>) {
     const emitter = to('data');
 
     const flight$ = combineLatest([serverMessage$, state$]).pipe(
@@ -102,13 +102,13 @@ declare const rxkfk: <T>(
 Only reading messages
 
 ```typescript
-const { message$$ } = rxkfk<TimeSeriesItem>(kafkaOptions, topicOptions, consumerOptions);
+const { message$$ } = rxkfk<FeedState>(kafkaOptions, topicOptions, consumerOptions);
 ```
 
 Create a `BehaviorSubject` to let many clients connect and have the latest data available
 
 ```typescript
-const fromLastMessage$$ = new BehaviorSubject<TimeSeriesItem>({ epoch: undefined, flights: [] });
+const fromLastMessage$$ = new BehaviorSubject<FeedState>({ epoch: undefined, flights: [] });
 
-message$$.pipe(filter((msg): msg is TimeSeriesItem => msg !== undefined)).subscribe(fromLastMessage$$);
+message$$.pipe(filter((msg): msg is FeedState => msg !== undefined)).subscribe(fromLastMessage$$);
 ```
