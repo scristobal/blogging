@@ -26,6 +26,10 @@ Similarly [Obsidian](https://www.obsidian.md) although Panda's live preview is m
 -   [Kroki](https://github.com/gregzuro/obsidian-kroki) render diagrams
 -   [Reading-time](https://github.com/avr/obsidian-reading-time)
 
+Another markdown editor, [InkDrop](www.inkdrop.app), haven't tried it yet. Not sure wether it can work on top of github or it uses its own could sync.
+
+Online edition with [Lexical](https://github.com/facebook/lexical) or [Marked](www.marked.js.org) bit outdated.
+
 A more focused alternative `nvim` [NeoVim](https://neovim.io/) that also runs on older devices
 
 ### Publication
